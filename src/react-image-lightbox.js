@@ -78,10 +78,10 @@ class ReactImageLightbox extends Component {
   }
 
   // Request to transition to the previous image
-  static getTransform({ x = 0, y = 0, zoom = 1, width, targetWidth }) {
+  static getTransform({ x = 0, y = 0, zoom = 1, width, targetWidth }, sidebarWidth) {
     let nextX = x;
     const isOldIE = ieVersion < 10;
-    const windowWidth = getWindowWidth();
+    const windowWidth = getWindowWidth()-sidebarWidth;
     if (width > windowWidth) {
       nextX += (windowWidth - width) / 2;
     }
@@ -445,7 +445,7 @@ class ReactImageLightbox extends Component {
     }
 
     return {
-      width: getWindowWidth(),
+      width: getWindowWidth()-this.props.sidebarWidth,
       height: getWindowHeight(),
       top: 0,
       right: 0,
@@ -1334,7 +1334,7 @@ class ReactImageLightbox extends Component {
         ...ReactImageLightbox.getTransform({
           ...transforms,
           ...bestImageInfo,
-        }),
+        },this.props.sidebarWidth),
       };
 
       if (zoomLevel > MIN_ZOOM_LEVEL) {
@@ -1437,7 +1437,7 @@ class ReactImageLightbox extends Component {
     const zoomMultiplier = this.getZoomMultiplier();
     // Next Image (displayed on the right)
     addImage('nextSrc', `ril-image-next ${styles.imageNext}`, {
-      x: boxSize.width,
+      x: boxSize.width+this.props.sidebarWidth,
     });
     // Main Image
     addImage('mainSrc', 'ril-image-current', {
@@ -1447,7 +1447,7 @@ class ReactImageLightbox extends Component {
     });
     // Previous Image (displayed on the left)
     addImage('prevSrc', `ril-image-prev ${styles.imagePrev}`, {
-      x: -1 * boxSize.width,
+      x: -1 * boxSize.width-this.props.sidebarWidth,
     });
 
     const modalStyle = {
