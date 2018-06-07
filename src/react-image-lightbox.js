@@ -411,7 +411,11 @@ class ReactImageLightbox extends Component {
    */
   getLightboxRect() {
     if (this.outerEl) {
-      return this.outerEl.getBoundingClientRect();
+      const boundingRect = this.outerEl.getBoundingClientRect()
+      return {
+        ...boundingRect,
+        width: boundingRect.width-this.props.sidebarWidth
+      }
     }
 
     return {
