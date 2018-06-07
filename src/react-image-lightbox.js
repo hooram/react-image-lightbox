@@ -67,7 +67,7 @@ class ReactImageLightbox extends Component {
     if (width > windowWidth) {
       nextX += (windowWidth - width) / 2;
     }
-    const scaleFactor = zoom * (targetWidth / width);
+    const scaleFactor = zoom * ((targetWidth-sidebarWidth) / width);
 
     return {
       transform: `translate3d(${nextX}px,${y}px,0) scale3d(${scaleFactor},${scaleFactor},1)`,
