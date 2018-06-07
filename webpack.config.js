@@ -3,11 +3,13 @@ const webpack = require('webpack');
 const autoprefixer = require('autoprefixer');
 const nodeExternals = require('webpack-node-externals');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+const ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 const target = process.env.TARGET || 'umd';
 
 const styleLoader = {
-  loader: 'isomorphic-style-loader',
+  loader: 'style-loader',
   options: { insertAt: 'top' },
 };
 
@@ -19,42 +21,43 @@ const fileLoader = {
 const postcssLoader = {
   loader: 'postcss-loader',
   options: {
-    plugins: () => [
-      autoprefixer({ browsers: ['IE >= 9', 'last 2 versions', '> 1%'] }),
-    ],
+    plugins: () => [autoprefixer()],
   },
 };
 
-const cssLoader = isLocal => ({
+const cssLoader = {
   loader: 'css-loader',
   options: {
-    modules: true,
-    '-autoprefixer': true,
     importLoaders: true,
-    localIdentName: isLocal ? 'ril__[local]' : null,
   },
-});
+};
+
+const defaultCssLoaders = [cssLoader, postcssLoader];
+
+const cssLoaders =
+  target !== 'development' && target !== 'demo'
+    ? ExtractTextPlugin.extract({
+        fallback: styleLoader,
+        use: defaultCssLoaders,
+      })
+    : [styleLoader, ...defaultCssLoaders];
 
 const config = {
-  entry: './src/index',
+  mode: 'production',
+  entry: { 'dist/main': './src/index' },
   output: {
-    path: path.join(__dirname, 'dist'),
+    path: __dirname,
     filename: '[name].js',
+    // See https://github.com/webpack/webpack/issues/6522
+    globalObject: 'typeof self !== \'undefined\' ? self : this',
     libraryTarget: 'umd',
     library: 'ReactImageLightbox',
   },
   devtool: 'source-map',
   plugins: [
-    new webpack.EnvironmentPlugin({ NODE_ENV: 'development' }),
+    new webpack.EnvironmentPlugin({ NODE_ENV: 'production' }),
     new webpack.optimize.OccurrenceOrderPlugin(),
-    new webpack.optimize.UglifyJsPlugin({
-      compress: {
-        warnings: false,
-      },
-      mangle: false,
-      beautify: true,
-      comments: true,
-    }),
+    new ExtractTextPlugin('style.css'),
   ],
   module: {
     rules: [
@@ -64,14 +67,14 @@ const config = {
         exclude: path.join(__dirname, 'node_modules'),
       },
       {
-        test: /\.scss$/,
-        use: [styleLoader, cssLoader(true), postcssLoader, 'sass-loader'],
-        exclude: path.join(__dirname, 'node_modules'),
+        test: /\.css$/,
+        use: cssLoaders,
+        exclude: [path.join(__dirname, 'examples')],
       },
       {
-        // Used for importing css from modules in node_modules
         test: /\.css$/,
-        use: [styleLoader, cssLoader(false), postcssLoader],
+        use: [styleLoader, ...defaultCssLoaders],
+        include: path.join(__dirname, 'examples'),
       },
     ],
   },
@@ -86,9 +89,29 @@ switch (target) {
         whitelist: [/\.(?!(?:jsx?|json)$).{1,5}$/i],
       }),
     ];
+
+    // Keep the minimizer from mangling variable names
+    // (we keep minimization enabled to remove dead code)
+    config.optimization = {
+      minimizer: [
+        new UglifyJSPlugin({
+          uglifyOptions: {
+            mangle: false,
+            compress: {
+              warnings: false,
+            },
+            output: {
+              beautify: true,
+              comments: true,
+            },
+          },
+        }),
+      ],
+    };
     break;
   case 'development':
-    config.devtool = 'eval';
+    config.mode = 'development';
+    config.devtool = 'eval-source-map';
     config.module.rules.push({
       test: /\.(jpe?g|png|gif|ico|svg)$/,
       use: [fileLoader],
@@ -133,11 +156,6 @@ switch (target) {
         template: './examples/cats/index.html',
       }),
       new webpack.EnvironmentPlugin({ NODE_ENV: 'production' }),
-      new webpack.optimize.UglifyJsPlugin({
-        compress: {
-          warnings: false,
-        },
-      }),
     ];
 
     break;
